@@ -1,0 +1,62 @@
+version: '3.8'
+
+services:
+  # MongoDB Service
+  mongodb:
+    image: mongo:6.0
+    container_name: cti-mongodb
+    ports:
+      - "27017:27017"
+    volumes:
+      - cti_db_data:/data/db
+    networks:
+      - cti-network
+    restart: unless-stopped
+
+  # Python FastAPI Backend Service
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: cti-backend
+    ports:
+      - "8000:8000"
+    environment:
+      - MONGODB_URI=mongodb://mongodb:27017
+      - DATABASE_NAME=cyber_threat_intel
+      - JWT_SECRET=super_secret_cyber_threat_assistant_key_change_me_in_prod_12345
+      - ACCESS_TOKEN_EXPIRE_MINUTES=1440
+      - NEWSDATA_API_KEY=
+      - SERPER_API_KEY=
+      - OPENAI_API_KEY=
+      - OPENAI_MODEL=gpt-4o-mini
+      - ADMIN_EMAIL=admin@cti.local
+      - ADMIN_PASSWORD=AdminPassword123!
+    depends_on:
+      - mongodb
+    networks:
+      - cti-network
+    restart: unless-stopped
+
+  # Vite React Frontend Service
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: cti-frontend
+    ports:
+      - "80"
+    environment:
+      - VITE_API_URL=http://localhost:8000
+    depends_on:
+      - backend
+    networks:
+      - cti-network
+    restart: unless-stopped
+
+volumes:
+  cti_db_data:
+
+networks:
+  cti-network:
+    driver: bridge
