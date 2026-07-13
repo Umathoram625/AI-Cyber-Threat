@@ -24,17 +24,20 @@ class NewsService:
                 "apikey": settings.NEWSDATA_API_KEY,
                 "q": "cybersecurity",
                 "language": "en",
-                "size": limit
+                "size": min(limit, 10)  # free plan max is 10
             }
 
             async with httpx.AsyncClient() as client:
                 response = await client.get(url, params=params, timeout=15.0)
 
             if response.status_code != 200:
-                logger.error(f"NewsData API Error: {response.status_code}")
+                logger.error(f"NewsData API Error: {response.status_code} - {response.text}")
                 return []
 
             data = response.json()
+            if data.get("status") != "success":
+                logger.error(f"NewsData API returned non-success: {data}")
+                return []
             results = data.get("results", [])
 
             articles = []
